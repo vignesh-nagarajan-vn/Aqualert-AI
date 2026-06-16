@@ -1,20 +1,21 @@
 # Project Context
 
-This repo is for Aqualert AI, the water-leak detection module inside the broader SchoolPulse hackathon concept.
+This repo is for SchoolPrint AI, the umbrella project for the broader SchoolPulse hackathon concept.
 
 ## Current Direction
 
 - Hackathon: USAII Global AI Hackathon 2026.
 - Track: High School, Challenge 2, Direction B: My School's Hidden Footprint.
 - Core idea: a suite of edge AI tools that reveal hidden school resource waste across water, food, and energy, tied together by a dashboard.
+- Product name in the current README: SchoolPrint AI.
 - Product name from the ideation doc: SchoolPulse.
-- Repo focus today: Aqualert AI / LeakListener, an acoustic edge AI tool for detecting water leaks before they become major failures.
+- Current repo scope: the full school hidden-footprint system, with Aqualert AI as the most developed water module.
 
 ## Why This Fits The Brief
 
 Challenge 2 asks for an AI-powered MVP that helps a school understand environmental impact and take practical, measurable action. Direction B specifically asks teams to make hidden school footprint patterns visible, show how specific behaviors affect outcomes, and help users prioritize high-impact actions.
 
-Aqualert AI fits because it turns hidden water waste into a local, measurable alert: where the leak is, why the AI thinks it is a leak, estimated impact, confidence, and what a custodian should check.
+SchoolPrint AI fits because it turns hidden water, food, and energy waste into local, measurable alerts: where the problem is, why the AI thinks it matters, estimated impact, confidence, and what a human should check next.
 
 ## System Concept
 
@@ -34,12 +35,11 @@ Aqualert AI fits because it turns hidden water waste into a local, measurable al
 
 ## Public Evidence Already In Repo
 
-- `Parentsquare Screenshot 1.png`: BASIS Phoenix school closure due to a water main break affecting campus operations.
-- `Parentsquare Screenshot 2.png`: BASIS Phoenix notice about very low water pressure from a water main break.
+- `context/evidence/Parentsquare Screenshot 1.png`: BASIS Phoenix school closure due to a water main break affecting campus operations.
+- `context/evidence/Parentsquare Screenshot 2.png`: BASIS Phoenix notice about very low water pressure from a water main break.
 
 These are strong local examples for the Aqualert AI problem framing.
 
 ## Private Notes
 
 Detailed email-derived information, including the qualifier code, is stored locally under `info/private/` and is intentionally gitignored because this repository is public.
-
