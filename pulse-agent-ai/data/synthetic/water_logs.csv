@@ -1,0 +1,51 @@
+ID,Timestamp,Location,State,Confidence Level,Water Decline (cm/hr)
+001,06-17-2026 08:00:00,Cafeteria Handwash Sink,Healthy,92.3%,-0.01
+002,06-17-2026 08:01:00,B-Wing Bathroom Toilet 3,Healthy,90.1%,-0.03
+003,06-17-2026 08:02:00,Main Supply Closet,Healthy,94.5%,0.02
+004,06-17-2026 08:03:00,Gym Locker Room Shower,Healthy,88.7%,-0.02
+005,06-17-2026 08:04:00,Science Lab Sink 4,Healthy,91.8%,0.01
+006,06-17-2026 08:05:00,B-Wing Bathroom Sink 2,Healthy,93.2%,-0.01
+007,06-17-2026 08:06:00,Cafeteria Handwash Sink,Healthy,89.4%,0.02
+008,06-17-2026 08:07:00,B-Wing Bathroom Toilet 3,Healthy,87.6%,-0.04
+009,06-17-2026 08:08:00,Main Supply Closet,Healthy,95.1%,0.01
+010,06-17-2026 08:09:00,Gym Locker Room Shower,Attention Needed,63.2%,-0.19
+011,06-17-2026 08:10:00,Science Lab Sink 4,Healthy,90.6%,-0.02
+012,06-17-2026 08:11:00,B-Wing Bathroom Sink 2,Healthy,92.8%,0.03
+013,06-17-2026 08:12:00,Cafeteria Handwash Sink,Healthy,91.0%,-0.01
+014,06-17-2026 08:13:00,B-Wing Bathroom Toilet 3,Attention Needed,61.4%,-0.16
+015,06-17-2026 08:14:00,Main Supply Closet,Healthy,93.7%,0.02
+016,06-17-2026 08:15:00,Gym Locker Room Shower,Attention Needed,67.8%,-0.23
+017,06-17-2026 08:16:00,Science Lab Sink 4,Healthy,89.3%,-0.03
+018,06-17-2026 08:17:00,B-Wing Bathroom Sink 2,Healthy,94.1%,0.01
+019,06-17-2026 08:18:00,Cafeteria Handwash Sink,Healthy,92.6%,-0.02
+020,06-17-2026 08:19:00,B-Wing Bathroom Toilet 3,Attention Needed,70.2%,-0.31
+021,06-17-2026 08:20:00,Main Supply Closet,Healthy,96.0%,0.03
+022,06-17-2026 08:21:00,Gym Locker Room Shower,Healthy,86.9%,-0.04
+023,06-17-2026 08:22:00,Science Lab Sink 4,Healthy,90.8%,0.02
+024,06-17-2026 08:23:00,B-Wing Bathroom Sink 2,Healthy,93.5%,-0.01
+025,06-17-2026 08:24:00,Cafeteria Handwash Sink,Healthy,88.2%,0.01
+026,06-17-2026 08:25:00,B-Wing Bathroom Toilet 3,Leaking,82.4%,-0.67
+027,06-17-2026 08:26:00,Main Supply Closet,Healthy,94.8%,-0.02
+028,06-17-2026 08:27:00,Gym Locker Room Shower,Attention Needed,65.1%,-0.22
+029,06-17-2026 08:28:00,Science Lab Sink 4,Healthy,91.4%,0.03
+030,06-17-2026 08:29:00,B-Wing Bathroom Sink 2,Healthy,90.7%,-0.02
+031,06-17-2026 08:30:00,Cafeteria Handwash Sink,Healthy,93.9%,0.01
+032,06-17-2026 08:31:00,B-Wing Bathroom Toilet 3,Leaking,87.6%,-0.84
+033,06-17-2026 08:32:00,Main Supply Closet,Healthy,95.3%,0.02
+034,06-17-2026 08:33:00,Gym Locker Room Shower,Healthy,87.4%,-0.03
+035,06-17-2026 08:34:00,Science Lab Sink 4,Attention Needed,58.9%,-0.13
+036,06-17-2026 08:35:00,B-Wing Bathroom Sink 2,Healthy,92.1%,0.01
+037,06-17-2026 08:36:00,Cafeteria Handwash Sink,Healthy,90.3%,-0.02
+038,06-17-2026 08:37:00,B-Wing Bathroom Toilet 3,Leaking,91.2%,-1.05
+039,06-17-2026 08:38:00,Main Supply Closet,Healthy,94.6%,0.01
+040,06-17-2026 08:39:00,Gym Locker Room Shower,Attention Needed,72.3%,-0.38
+041,06-17-2026 08:40:00,Science Lab Sink 4,Healthy,88.5%,-0.04
+042,06-17-2026 08:41:00,B-Wing Bathroom Sink 2,Healthy,93.8%,0.02
+043,06-17-2026 08:42:00,Cafeteria Handwash Sink,Healthy,91.7%,-0.01
+044,06-17-2026 08:43:00,B-Wing Bathroom Toilet 3,Leaking,94.8%,-1.23
+045,06-17-2026 08:44:00,Main Supply Closet,Attention Needed,60.7%,-0.17
+046,06-17-2026 08:45:00,Gym Locker Room Shower,Healthy,89.1%,-0.02
+047,06-17-2026 08:46:00,Science Lab Sink 4,Healthy,92.4%,0.03
+048,06-17-2026 08:47:00,B-Wing Bathroom Sink 2,Healthy,90.5%,-0.01
+049,06-17-2026 08:48:00,Cafeteria Handwash Sink,Healthy,94.2%,0.02
+050,06-17-2026 08:49:00,B-Wing Bathroom Toilet 3,Leaking,96.3%,-1.41
