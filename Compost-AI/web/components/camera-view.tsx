@@ -3,11 +3,25 @@
 import * as React from "react";
 import { SwitchCamera, CameraOff, Loader2 } from "lucide-react";
 
+import { meanAbsDiff, objectPresent } from "@/lib/background-diff.mjs";
+
 type Facing = "environment" | "user";
 
 // Fraction of the shorter screen/video dimension used as the scan square.
 // 0.65 = the square covers 65% of the shorter side, centered.
 const SCAN_FRACTION = 0.65;
+
+// Background subtraction: downsample the scan square to GRID×GRID grayscale and
+// compare against a baseline of the empty tray. A capture only classifies when
+// the frame differs from the baseline by at least PRESENCE_THRESHOLD — this
+// stops the model from classifying the bare cardboard tray on a false trigger.
+const GRID = 48;
+const PRESENCE_THRESHOLD = 0.05; // ≥5% mean grayscale change == new object
+const REFRESH_MAX_DIFF = 0.04;   // refresh baseline only when tray looks unchanged
+
+// Module-level so the empty-tray baseline survives the component unmount/remount
+// that happens every camera → result → camera cycle.
+let baselineGray: Uint8ClampedArray | null = null;
 
 interface CameraViewProps {
   /** Called with a square JPEG data URL when the user taps capture. */
@@ -19,6 +33,8 @@ interface CameraViewProps {
   autoCapture?: boolean;
   /** Called immediately after autoCapture fires so the parent can clear the flag. */
   onAutoCaptureConsumed?: () => void;
+  /** Called when a trigger fired but the scan square matches the empty tray. */
+  onNoObject?: () => void;
 }
 
 export function CameraView({
@@ -27,6 +43,7 @@ export function CameraView({
   triggerRef,
   autoCapture = false,
   onAutoCaptureConsumed,
+  onNoObject,
 }: CameraViewProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -49,6 +66,55 @@ export function CameraView({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCapture, ready]);
+
+  // Downsample the current scan square to a GRID×GRID grayscale buffer for
+  // background comparison. Uses the same crop region as capture().
+  const sampleGray = React.useCallback((): Uint8ClampedArray | null => {
+    const video = videoRef.current;
+    if (!video || !ready) return null;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) return null;
+
+    const side = Math.round(Math.min(w, h) * SCAN_FRACTION);
+    const sx = (w - side) / 2;
+    const sy = (h - side) / 2;
+
+    const c = document.createElement("canvas");
+    c.width = GRID;
+    c.height = GRID;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, GRID, GRID);
+    const { data } = ctx.getImageData(0, 0, GRID, GRID);
+
+    const gray = new Uint8ClampedArray(GRID * GRID);
+    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+      gray[p] = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+    }
+    return gray;
+  }, [ready]);
+
+  // Maintain the empty-tray baseline. Sample once on ready, then periodically —
+  // but only overwrite the baseline when the frame still looks like the baseline
+  // (diff < REFRESH_MAX_DIFF). That tracks slow lighting drift while preserving
+  // the empty baseline the moment an object appears.
+  React.useEffect(() => {
+    if (!ready) return;
+    const maintain = () => {
+      if (busy || autoCapture) return;
+      const g = sampleGray();
+      if (!g) return;
+      if (!baselineGray) {
+        baselineGray = g;
+      } else if (meanAbsDiff(g, baselineGray) < REFRESH_MAX_DIFF) {
+        baselineGray = g;
+      }
+    };
+    maintain();
+    const id = setInterval(maintain, 1500);
+    return () => clearInterval(id);
+  }, [ready, busy, autoCapture, sampleGray]);
 
   const stop = React.useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -103,6 +169,14 @@ export function CameraView({
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (!w || !h) return;
+
+    // Background-subtraction gate: only classify when the scan square differs
+    // from the empty-tray baseline. Fail open if no baseline exists yet.
+    const gray = sampleGray();
+    if (gray && baselineGray && !objectPresent(gray, baselineGray, PRESENCE_THRESHOLD)) {
+      onNoObject?.();
+      return;
+    }
 
     // Crop to the scan square (SCAN_FRACTION of the shorter dimension, centered).
     const outerSide = Math.min(w, h);
