@@ -1,0 +1,212 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:       #07101f;
+  --surface:  #0d1829;
+  --surface2: #121f35;
+  --border:   #1a2c47;
+  --text:     #dde5f0;
+  --muted:    #4a6480;
+  --accent:   #60a5fa;
+  --green:    #4ade80;
+  --yellow:   #fbbf24;
+  --red:      #f87171;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  padding: 1.5rem 2rem 4rem;
+}
+
+/* ── Layout ── */
+.root {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+}
+
+.logo { display: flex; align-items: center; gap: 0.4rem; }
+.logo-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.logo-sep { color: var(--border); }
+.logo-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.3rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid;
+  transition: color 0.4s, border-color 0.4s;
+}
+.live-pill.live   { color: var(--green);  border-color: var(--green); }
+.live-pill.stale  { color: var(--yellow); border-color: var(--yellow); }
+.live-pill.offline{ color: var(--muted);  border-color: var(--border); }
+
+/* ── Top row ── */
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+}
+
+.card-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Value card ── */
+.big-value {
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  transition: color 0.5s;
+  margin-bottom: 1rem;
+}
+.unit {
+  font-size: 1.5rem;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 0.2rem;
+}
+.status-pill {
+  display: inline-block;
+  padding: 0.3rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: 1px solid currentColor;
+}
+
+/* ── Device / meta card ── */
+.device-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+.meta-text {
+  font-size: 0.85rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+.raw-text {
+  font-size: 0.8rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--accent);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Thresholds card ── */
+.threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.6rem;
+}
+.threshold-val {
+  margin-left: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--muted);
+}
+
+/* ── Chart card ── */
+.chart-card { padding: 1.2rem 1.6rem 1.4rem; }
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.chart-meta {
+  font-size: 0.7rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--muted);
+}
+.chart-area { height: 130px; }
+
+/* ── Dot ── */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.live-pill.live .dot {
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+/* ── Empty state ── */
+.empty-chart {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
+  body { padding: 1rem; }
+  .top-row { grid-template-columns: 1fr; }
+  .big-value { font-size: 3.5rem; }
+}

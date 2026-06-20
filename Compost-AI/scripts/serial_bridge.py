@@ -1,11 +1,13 @@
 """
-serial_bridge.py — reads ITEM_DETECTED from the Arduino over USB serial
-and POSTs to the Next.js /api/trigger endpoint so the web app auto-captures.
+serial_bridge.py — bidirectional bridge between the Arduino and the Next.js app.
+
+  Arduino → laptop : ITEM_DETECTED  → POST /api/trigger  (fires camera capture)
+  Laptop  → Arduino: GARBAGE/COMPOST ← GET  /api/servo-command (rotates servo)
 
 Usage:
-    python serial_bridge.py              # uses defaults below
-    python serial_bridge.py COM4         # override port
-    python serial_bridge.py COM4 3000    # override port + Next.js port
+    python serial_bridge.py              # defaults: COM3, port 3000
+    python serial_bridge.py COM4
+    python serial_bridge.py COM4 3000
 
 Install deps once:
     pip install pyserial requests
@@ -13,13 +15,29 @@ Install deps once:
 
 import sys
 import time
+import threading
 import serial
 import requests
 
-PORT    = sys.argv[1] if len(sys.argv) > 1 else "COM3"
-NJ_PORT = sys.argv[2] if len(sys.argv) > 2 else "3000"
-BAUD    = 9600
-URL     = f"http://localhost:{NJ_PORT}/api/trigger"
+PORT        = sys.argv[1] if len(sys.argv) > 1 else "COM3"
+NJ_PORT     = sys.argv[2] if len(sys.argv) > 2 else "3000"
+BAUD        = 9600
+TRIGGER_URL = f"http://localhost:{NJ_PORT}/api/trigger"
+SERVO_URL   = f"http://localhost:{NJ_PORT}/api/servo-command"
+
+
+def servo_poller(ser: serial.Serial) -> None:
+    """Background thread: polls /api/servo-command and writes to Arduino."""
+    while True:
+        try:
+            r = requests.get(SERVO_URL, timeout=3)
+            cmd = r.json().get("command")
+            if cmd:
+                print(f"[bridge] servo → {cmd}")
+                ser.write((cmd + "\n").encode())
+        except requests.RequestException:
+            pass  # Next.js may not be up yet; keep retrying
+        time.sleep(0.5)
 
 
 def main() -> None:
@@ -28,12 +46,19 @@ def main() -> None:
         ser = serial.Serial(PORT, BAUD, timeout=1)
     except serial.SerialException as e:
         sys.exit(f"[bridge] ERROR: could not open {PORT}: {e}\n"
-                 "  → Check Device Manager → Ports for the right COM number.")
+                 "  → Check Device Manager → Ports for the right COM number.\n"
+                 "  → Close the Arduino IDE Serial Monitor if it's open.")
 
-    time.sleep(2)   # Arduino resets on connect; wait for it to be ready
+    time.sleep(2)  # Arduino resets on connect; wait for it to be ready
     ser.reset_input_buffer()
-    print(f"[bridge] ready — listening for ITEM_DETECTED → {URL}")
+    print(f"[bridge] ready — ITEM_DETECTED → {TRIGGER_URL}")
+    print(f"[bridge]         servo commands ← {SERVO_URL}")
 
+    # Start servo polling on a daemon thread so it exits when the main thread does.
+    t = threading.Thread(target=servo_poller, args=(ser,), daemon=True)
+    t.start()
+
+    # Main thread: read lines from Arduino and forward ITEM_DETECTED.
     while True:
         try:
             line = ser.readline().decode("utf-8", errors="ignore").strip()
@@ -48,10 +73,10 @@ def main() -> None:
         if line == "ITEM_DETECTED":
             print("[bridge] triggering capture …")
             try:
-                r = requests.post(URL, timeout=3)
+                r = requests.post(TRIGGER_URL, timeout=3)
                 print(f"[bridge] → {r.status_code}")
             except requests.ConnectionError:
-                print(f"[bridge] WARNING: could not reach {URL} "
+                print(f"[bridge] WARNING: could not reach {TRIGGER_URL} "
                       "(is `npm run dev` running?)")
             except requests.Timeout:
                 print("[bridge] WARNING: trigger request timed out")

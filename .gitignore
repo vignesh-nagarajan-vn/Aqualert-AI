@@ -3,3 +3,16 @@ info/private/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Python virtualenvs (large, platform-specific — never commit)
+.venv/
+venv/
+
+# Node / Next.js build artifacts
+node_modules/
+.next/
+out/
+
+# Local env files (secrets)
+.env
+.env*.local

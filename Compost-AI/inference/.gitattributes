@@ -1,0 +1,5 @@
+# Hugging Face Spaces requires files >10 MB to be stored via Git LFS.
+# Track model weights so `git push` to the Space uploads them correctly.
+*.keras filter=lfs diff=lfs merge=lfs -text
+*.tflite filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text

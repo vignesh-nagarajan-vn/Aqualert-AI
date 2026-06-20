@@ -1,0 +1,5 @@
+# Dependencies for scripts/serial_reader.py only.
+# Install with: pip install -r scripts/requirements.txt
+pyserial>=3.5
+requests>=2.28
+python-dotenv>=1.0

@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
+# Local virtualenv — never push to the Space (Linux build installs from requirements.txt).
+.venv/
 correction_memory.json
 gradcam_out.png
 # Track the model with Git LFS when pushing to the Space; ignore stray copies:

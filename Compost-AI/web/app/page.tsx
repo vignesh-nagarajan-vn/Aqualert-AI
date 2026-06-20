@@ -24,6 +24,15 @@ export default function Home() {
   const [toast, setToast] = React.useState<string | null>(null);
   const [activityNonce, setActivityNonce] = React.useState(0);
 
+  // Ref so the capture callback inside the interval always sees the latest value
+  // without re-registering the interval on every render.
+  const cameraRef = React.useRef<{ capture: () => void } | null>(null);
+
+  // When triggered from the result screen we can't capture immediately (the
+  // camera isn't mounted yet). This flag tells CameraView to fire as soon as
+  // it's ready.
+  const [autoCapture, setAutoCapture] = React.useState(false);
+
   const reset = React.useCallback(() => {
     setResult(null);
     setPhoto(null);
@@ -39,6 +48,30 @@ export default function Home() {
     const t = setTimeout(reset, RESULT_TIMEOUT_MS);
     return () => clearTimeout(t);
   }, [phase, activityNonce, reset]);
+
+  // Poll /api/trigger every second on both the camera and result screens.
+  // - Camera screen: fire capture immediately via the CameraView ref.
+  // - Result screen: reset to camera and set autoCapture so CameraView fires
+  //   as soon as the video stream is ready.
+  React.useEffect(() => {
+    if (phase !== "camera" && phase !== "result") return;
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/trigger");
+        const data = await res.json();
+        if (!data.triggered) return;
+        if (phase === "camera" && cameraRef.current) {
+          cameraRef.current.capture();
+        } else if (phase === "result") {
+          setAutoCapture(true);
+          reset();
+        }
+      } catch {
+        // silently ignore — bridge may not be running
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase, reset]);
 
   // Auto-dismiss the thank-you toast.
   React.useEffect(() => {
@@ -60,6 +93,13 @@ export default function Home() {
       if (!res.ok) throw new Error(data?.error ?? data?.detail ?? "Prediction failed");
       setResult(data as PredictResult);
       setPhase("result");
+
+      // Tell the Arduino which way to rotate. physical_bin is "Garbage" | "Compost".
+      fetch("/api/servo-command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: (data.physical_bin as string).toUpperCase() }),
+      }).catch(() => {/* best-effort */});
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong");
       setPhase("error");
@@ -90,7 +130,12 @@ export default function Home() {
   if (phase === "camera") {
     return (
       <>
-        <CameraView onCapture={handleCapture} />
+        <CameraView
+          onCapture={handleCapture}
+          triggerRef={cameraRef}
+          autoCapture={autoCapture}
+          onAutoCaptureConsumed={() => setAutoCapture(false)}
+        />
         {toast ? (
           <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
             <div className="rounded-xl bg-black/85 px-8 py-5 text-lg font-bold text-white shadow-xl">

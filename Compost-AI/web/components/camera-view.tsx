@@ -9,14 +9,42 @@ interface CameraViewProps {
   /** Called with a square JPEG data URL when the user taps capture. */
   onCapture: (dataUrl: string) => void;
   busy?: boolean;
+  /** Optional ref populated with { capture } so the Arduino trigger can fire it. */
+  triggerRef?: React.MutableRefObject<{ capture: () => void } | null>;
+  /** When true, fires capture as soon as the camera stream is ready. */
+  autoCapture?: boolean;
+  /** Called immediately after autoCapture fires so the parent can clear the flag. */
+  onAutoCaptureConsumed?: () => void;
 }
 
-export function CameraView({ onCapture, busy = false }: CameraViewProps) {
+export function CameraView({
+  onCapture,
+  busy = false,
+  triggerRef,
+  autoCapture = false,
+  onAutoCaptureConsumed,
+}: CameraViewProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const [facing, setFacing] = React.useState<Facing>("environment");
   const [error, setError] = React.useState<string | null>(null);
   const [ready, setReady] = React.useState(false);
+
+  // Expose capture() to the parent so the Arduino trigger can fire it remotely.
+  React.useEffect(() => {
+    if (triggerRef) triggerRef.current = { capture };
+    return () => { if (triggerRef) triggerRef.current = null; };
+  });
+
+  // If we were navigated back from the result screen with autoCapture set,
+  // fire as soon as the video stream is ready.
+  React.useEffect(() => {
+    if (autoCapture && ready) {
+      onAutoCaptureConsumed?.();
+      capture();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCapture, ready]);
 
   const stop = React.useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
