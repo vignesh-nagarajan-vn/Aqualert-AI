@@ -4,157 +4,169 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**SchoolPulse AI** is the umbrella repo for **SchoolPulse**, an entry for USAII Global AI Hackathon 2026, High School Challenge 2 (Direction B: My School's Hidden Footprint). It is a suite of three independent edge AI modules unified by a web dashboard.
+**SchoolPulse AI** is the umbrella repo for **SchoolPulse**, an entry for USAII Global AI Hackathon 2026, High School Challenge 2 (Direction B: My School's Hidden Footprint). It is a suite of three independent edge AI modules plus a unifying web dashboard, all aimed at cutting a school's hidden water, energy, and food waste.
 
-## Modules
+The repo holds four independently deployable pieces:
 
-| Module | Dir | What it does |
-|---|---|---|
-| **Aqualert AI** | `aqualert-ai/` | Ultrasonic edge detector for running/leaking toilets. No ML — uses OLS regression + statistical CIs + a state machine. Runs on a Raspberry Pi Zero but simulates fully without hardware. |
-| **Compost AI** | `Compost-AI/` | EfficientNetB0 CNN (~96% accuracy) trained in a Jupyter notebook; classifies waste as garbage/recycling/compost. Weights exported as `.keras` and quantized `.tflite`. |
-| **Pulse Agent AI** | `pulse-agent-ai/` | FastAPI backend. RAG over project docs + research sources (TF-IDF + sklearn, index built with joblib). Optionally calls Gemma on AWS Lambda or locally via GPU. Feeds the dashboard with action cards. |
-| **SchoolPulse dashboard** | (not yet in repo) | Web UI that unifies all three modules into a "Hidden Footprint Map" with per-incident cards. |
+| Piece | Dir | Stack | What it is |
+|---|---|---|---|
+| **Aqualert AI** | `aqualert-ai/` | Python (stdlib + numpy) | Edge detector for running/leaking toilets. **No ML** — OLS regression + statistical CIs + a state machine. Runs on a Raspberry Pi Zero, simulates fully without hardware. |
+| **Compost AI** | `Compost-AI/` | Jupyter + TensorFlow | EfficientNetB0 CNN (~96% acc) that sorts waste as garbage/recycling/compost. Weights are checked in as `.keras` + quantized `.tflite`. |
+| **Pulse Agent AI** | `pulse-agent-ai/` | FastAPI + Next.js | The "brain" + dashboard. Backend does analytics, RAG, and a Gemma-or-fallback agent over synthetic/real logs; `web/` is the Next.js dashboard. |
+| **Aqualert frontend** | `aqualert-frontend/` | Next.js + Vercel KV | Tiny standalone ingest app: receives live readings from the physical sensor (`/api/ingest`) and serves the latest (`/api/latest`). Separate from `pulse-agent-ai/web`. |
+
+The umbrella repo is a plain git repo (no monorepo tooling) — each piece manages its own deps (`requirements.txt` for Python, `package.json` for Next apps).
+
+## Cross-cutting design principles
+
+These hold across every module and are the main thing to internalize:
+
+- **Advisory only.** No module ever actuates anything irreversible — no purchases, repairs, schedule/route changes, or valve control. Every output is a *human-checkable action card* carrying a confidence score, a CI or evidence string, and an explicit "human check" step.
+- **Graceful degradation is layered, by design.** Two independent fallbacks mean a demo always renders:
+  1. **Backend** (`app/agent.py`): if no GPU/LLM is configured (`LLM_BASE_URL` unset) it returns a *deterministic* answer built from analytics — never errors out.
+  2. **Frontend** (`web/lib/api.ts`): every `/api/*` call is wrapped; on failure it falls back to **bundled synthetic JSON** in `web/lib/fallback/*.json`. So the dashboards render with believable data even with the backend fully down. The proxy errors to `127.0.0.1:8000` you'll see in dev logs are expected when the backend isn't running.
+- **Secrets only via env vars.** Never in `config.yaml`, `.env` (gitignored), or code. See `pulse-agent-ai/.env.example` and `aqualert-ai/config.example.yaml` for the full list.
+- **Reproducible sims.** Simulators are seeded so demo runs repeat exactly.
 
 ---
 
-## Aqualert AI
+## Pulse Agent AI (`pulse-agent-ai/`)
 
-### Install & configure
+This is where most active work happens. It is **two apps that talk over `/api/*`**.
 
-```bash
-cd aqualert-ai
-pip install -r requirements.txt
-cp config.example.yaml config.yaml   # then edit
+### Data flow (read this before touching the backend)
+
+```
+data/synthetic/*.csv  (+ context docs, research_sources.json)
+   │
+   ├─ scripts/generate_synthetic_data.py → the CSV logs
+   ├─ scripts/init_db.py                 → SQLite (DATABASE_PATH)
+   ├─ scripts/build_rag_index.py         → rag_index/index.joblib (TF-IDF + matrix + chunks)
+   └─ scripts/train_models.py            → energy/event models in models/
+                         │
+                         ▼
+   app/analytics.py (AnalyticsService) ─ overview / energy / water / waste / events summaries
+   app/rag.py       (RagRetriever)     ─ cosine sim over the joblib TF-IDF index (lazy-loaded)
+   app/agent.py     (PulseAgent)       ─ RAG + analytics → Gemma (if configured) else deterministic fallback
+                         │
+                         ▼
+   app/main.py  FastAPI  →  /api/* endpoints  →  dashboard(s)
 ```
 
-Secrets via env vars (never in config.yaml):
-```bash
-export AQUALERT_MQTT_USERNAME=...
-export AQUALERT_MQTT_PASSWORD=...
-export AQUALERT_REST_TOKEN=...
-```
+`overview()` is the keystone: it produces `impact_totals` + `top_action_cards`, and both the home page and the agent answer are built on top of it.
 
-### Run in simulation (no hardware needed)
+### Backend: install & run
 
 ```bash
-python scripts/simulate.py --scenario normal
-python scripts/simulate.py --scenario leak_slow --json
-python scripts/simulate.py --scenario leak_fast
-python scripts/simulate.py --scenario sensor_fault
+cd pulse-agent-ai
+python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\activate on Windows
+pip install -r requirements.txt                     # +requirements-gpu.txt / -google.txt for those paths
+
+# One-time data/index/db build:
+python scripts/generate_synthetic_data.py
+python scripts/init_db.py
+python scripts/build_rag_index.py
+python scripts/train_models.py
+
+# Run the API. NOTE: the web app proxies to :8000 by default, so use 8000 if you
+# want the Next dashboard to reach it (the backend README's :8010 is for the
+# built-in test page only).
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Run on a Raspberry Pi (real HC-SR04 sensor)
+- Built-in test dashboard: `http://127.0.0.1:8000/` (serves `app/static/index.html`)
+- OpenAPI docs: `http://127.0.0.1:8000/docs`
+
+Demo / smoke / full tests:
 
 ```bash
-# Calibrate first (on the Pi):
-python scripts/calibrate.py --config config.yaml --empty   # empty tank
-python scripts/calibrate.py --config config.yaml           # full tank
-
-# Then run:
-python -m aqualert.runner --config config.yaml
+python scripts/run_demo.py              # asks a few sample questions end-to-end
+python scripts/run_full_tests.py        # broader backend check
+python scripts/run_gemma_smoke_test.py  # requires a GPU/Lambda LLM endpoint — see docs/gemma_lambda.md
 ```
 
-### Server (MQTT subscriber + read API)
+### Backend: the Gemma vs. fallback switch
+
+The agent is CPU-safe by default. To enable Gemma, point it at any **OpenAI-compatible** `/chat/completions` endpoint (vLLM on a GPU box, Lambda, etc.) and restart uvicorn:
 
 ```bash
-python server/receiver.py --config config.yaml --db telemetry.sqlite
-# Endpoints: GET /health, /devices/<id>/latest, /devices/<id>/history
-# --no-mqtt runs the read API only
+export LLM_BASE_URL="http://YOUR_GPU_IP:8000/v1"
+export LLM_MODEL="google/gemma-4-12B-it"
+export LLM_API_KEY="EMPTY"
 ```
 
-### Tests
+`agent.py::_try_llm` calls it; any exception silently falls back to `_fallback_answer`. Voice (ElevenLabs) and Supabase/Google-Sheets sync are similarly optional and keyed off env vars.
+
+### Frontend: `pulse-agent-ai/web` (Next.js 14, App Router)
 
 ```bash
-cd aqualert-ai
-python -m pytest                  # all tests
-python -m pytest tests/test_detector.py   # single file
+cd pulse-agent-ai/web
+npm install
+npm run dev          # localhost:3000; proxies /api/* → PULSE_API_BASE (default http://127.0.0.1:8000)
+npm run build
+npm run lint
+npm run gen:fallback # regenerate web/lib/fallback/*.json from ../data/synthetic/*.csv
 ```
+
+- **API plumbing:** browser code calls *same-origin* `/api/*`. `next.config.mjs` rewrites those to `PULSE_API_BASE`. On Vercel, `pulse-agent-ai/vercel.json` instead rewrites `/api/*` to a **Cloudflare tunnel** URL that fronts the GPU box. So changing where the backend lives is a config change, never a code change.
+- **Fallback data** in `web/lib/fallback/` is **generated, not hand-edited** — change the source CSVs (or `gen-fallback.mjs`) and rerun `npm run gen:fallback`.
+- Pages: `app/page.tsx` (voice agent + footprint summary + action cards), and `app/{food,water,energy,events}/page.tsx` (per-module data tables). Shared UI in `components/` (shadcn-style primitives under `components/ui/`). Black-and-white design system; red is reserved exclusively for critical-row highlights.
+- Live feeds: `/water` and `/food` poll `/api/water/live` and `/api/waste/live` on an interval; ingestion is `POST /api/{water,waste}/live` (backed by `app/water_live.py` / `app/waste_live.py`).
+
+---
+
+## Aqualert AI (`aqualert-ai/`)
 
 ### Detection pipeline
 
 ```
 HC-SR04 sensor
-  → sensor.py (SimulatedSensor / HCSR04Sensor + VirtualClock)
+  → sensor.py     (SimulatedSensor / HCSR04Sensor + VirtualClock)
   → measurement.py (7 samples, MAD outlier rejection, Student's-t 95% CI → Measurement)
-  → detector.py (event unwrap → OLS slope CI → state machine → Detection)
-  → telemetry.py (MQTT/TLS + REST fallback + SQLite store-and-forward)
+  → detector.py   (event unwrap → OLS slope CI → state machine → Detection)
+  → telemetry.py  (MQTT/TLS + REST fallback + SQLite store-and-forward)
 ```
 
-**Detection states:** `NORMAL`, `WATCH`, `LEAK_SUSPECTED`, `SENSOR_FAULT`. A leak is only flagged when the *upper* bound of the slope CI clears the threshold — conservative by design. During occupied hours, a trend must sustain for 3 consecutive windows before escalating from `WATCH` to `LEAK_SUSPECTED`.
+**States:** `NORMAL`, `WATCH`, `LEAK_SUSPECTED`, `SENSOR_FAULT`. A leak is flagged only when the *upper* bound of the slope CI clears the threshold (conservative by design); during occupied hours a trend must sustain 3 consecutive windows before `WATCH → LEAK_SUSPECTED`. `gpiozero`/`RPi.GPIO` are imported lazily, and the REST fallback uses stdlib `urllib`, so nothing GPU/GPIO is a hard dependency — simulation runs anywhere.
 
-`gpiozero`/`RPi.GPIO` are **not** hard dependencies — they are imported lazily so simulation works with zero GPIO hardware.
+### Run & test
 
-REST fallback uses `urllib` (stdlib only) to avoid an extra dependency on constrained Pi hardware.
+```bash
+cd aqualert-ai
+pip install -r requirements.txt
+# Secrets via AQUALERT_* env vars. Simulation needs no config file (scripts/simulate.py
+# has a built-in default); only the real-Pi paths below require a config.yaml you supply
+# with --config (set sensor.mode: real in it).
+
+python scripts/simulate.py --scenario normal      # also: leak_slow --json, leak_fast, sensor_fault
+python scripts/serial_reader.py                   # forwards a real Arduino serial feed (115200 baud JSON lines) → aqualert-frontend POST /api/ingest
+
+# On a Pi with a real HC-SR04:
+python scripts/calibrate.py --config config.yaml --empty   # then again for full tank
+python -m aqualert.runner --config config.yaml
+
+python server/receiver.py --config config.yaml --db telemetry.sqlite  # MQTT subscriber + read API (--no-mqtt for read-only)
+
+python -m pytest                       # all tests
+python -m pytest tests/test_detector.py            # one file
+python -m pytest tests/test_detector.py::test_name # one test
+```
+
+`aqualert-frontend/` is the deployable counterpart: a Vercel app using `@vercel/kv` to receive those live sensor posts (`app/api/ingest`) and serve the latest reading (`app/api/latest`).
 
 ---
 
-## Compost AI
+## Compost AI (`Compost-AI/`)
 
-The model lives entirely in a Jupyter notebook (`Compost-AI/Compost AI (EfficientNetB0 ~96% Accuracy).ipynb`). Pre-trained weights are checked in:
+The model lives entirely in `Compost-AI/Compost AI (EfficientNetB0 ~96% Accuracy).ipynb`. Pre-trained weights are checked in:
 
 - `Models/efficientnet-b0-weights.keras` — full Keras model
 - `Models/quantized-tflite-weights.tflite` — quantized for Pi 4
 
-To retrain or audit: open the notebook and run all cells (requires TensorFlow + a GPU for speed; CPU is slow but works).
+To retrain/audit: open the notebook and run all cells (TensorFlow; a GPU helps, CPU works). Inference helpers are in `inference/`; evaluation artifacts in `Results/` and `Audit/`.
 
 ---
 
-## Pulse Agent AI
+## Context & docs
 
-### Install
-
-```bash
-cd pulse-agent-ai
-python -m venv .venv               # already present
-.venv\Scripts\activate             # Windows
-pip install -r requirements.txt
-
-# GPU / Gemma variant:
-pip install -r requirements-gpu.txt
-# Google Gemma API variant:
-pip install -r requirements-google.txt
-```
-
-### Setup and run
-
-```bash
-# Initialize the SQLite database:
-python scripts/init_db.py
-
-# Build the RAG index from project docs + research_sources.json:
-python scripts/build_rag_index.py
-
-# Run the demo (asks three sample questions):
-python scripts/run_demo.py
-
-# Gemma smoke test (requires GPU or Lambda setup — see docs/gemma_lambda.md):
-python scripts/run_gemma_smoke_test.py
-```
-
-### Architecture
-
-```
-data/raw/research_sources.json  +  context docs
-        |
-        v  build_rag_index.py
-   TF-IDF vectorizer + matrix (joblib)  ←─ app/rag.py (RagRetriever)
-        |
-        v  app/agent.py (PulseAgent)
-   SQLite anomaly logs  →  analytics  →  RAG retrieval  →  Gemma / CPU fallback
-        |
-        v
-   action_cards + answer  →  FastAPI  →  dashboard
-```
-
-RAG uses cosine similarity over a TF-IDF matrix. The index is a joblib dict with keys `vectorizer`, `matrix`, and `chunks`. `RagRetriever` lazy-loads it on first search call.
-
-The agent (`app/agent.py`) and FastAPI app are not yet present in the repo — `run_demo.py` references them as the next implementation step.
-
----
-
-## Key design constraints
-
-- Every module is **advisory only** — no actuators, no irreversible actions.
-- Every alert ships a confidence score, CI, and human-readable reasoning trace.
-- Credentials always come from environment variables; none are in config files or code.
-- The simulator is seeded (`sensor.sim_seed` in config) so demo runs are reproducible.
+`context/` holds the hackathon brief, challenge notes, and email/Doc synthesis that the RAG index ingests — start there for the "why." Deployment specifics (Vercel + GPU + Supabase + Google Sheets, and Lambda/Gemma) live in `pulse-agent-ai/docs/`.
