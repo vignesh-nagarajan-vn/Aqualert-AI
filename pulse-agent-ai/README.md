@@ -82,11 +82,3 @@ See [docs/gemma_lambda.md](docs/gemma_lambda.md) for the Lambda setup.
 For the public demo path, deploy this folder (`pulse-agent-ai`) on Vercel and run Gemma on the A100 as an OpenAI-compatible vLLM server. Supabase stores durable agent/log/context records, and Google Sheets can act as a staff-editable school data surface.
 
 See [docs/deployment_vercel_gpu_supabase.md](docs/deployment_vercel_gpu_supabase.md).
-
-## Why Judges Should Like This
-
-- Problem understanding: school waste is framed as hidden operational memory loss, not generic sustainability.
-- AI reasoning: uses anomaly detection, forecasting, retrieval, recommendations, and a voice/chat agent.
-- Solution design: every insight becomes a human-checkable action card.
-- Impact: estimates wasted kWh, gallons, food waste, compost diversion, and event footprint.
-- Responsible AI: the agent explains confidence and always asks a human to verify before real-world action.
