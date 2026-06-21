@@ -1,0 +1,24 @@
+numpy>=1.26.0
+pydantic>=2.7.0
+
+# Pulse Agent AI
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pandas>=2.2.0
+scikit-learn>=1.5.0
+joblib>=1.4.0
+requests>=2.32.0
+python-multipart>=0.0.20
+
+# Aqualert AI
+scipy>=1.11
+pyyaml>=6.0
+paho-mqtt>=1.6,<3
+flask>=3.0
+pyserial>=3.5
+pytest>=8.0
+
+# Compost AI
+tensorflow-cpu==2.16.1
+pillow>=10.4.0
+opencv-python-headless>=4.10.0.84
