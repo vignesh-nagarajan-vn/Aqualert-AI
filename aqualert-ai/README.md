@@ -2,14 +2,14 @@
 Aqualert AI is an edge-AI leak detector designed to flag running or leaking toilets in school bathrooms before significant water waste occurs. It is a component of **SchoolPulse AI**, which is a suite of edge AI tools designed to help reduce a school's environmental footprint. This directory contains the source code, server, simulation scripts, and tests for the Aqualert AI detection pipeline.
 
 ### Problem
-***[A single running toilet can waste up to 200 gallons of water per day](https://www.epa.gov/watersense/fix-a-leak-week)*** — silently, invisibly, and often for weeks before anyone notices. In a school with dozens of bathrooms, a worn flapper or fill valve that won't fully seat can drain tens of thousands of gallons a year. The problem is that:
+***[A single running toilet can waste up to 200 gallons of water per day](https://www.epa.gov/watersense/fix-a-leak-week)***  for weeks before anyone notices. In a school with dozens of bathrooms, a worn flapper or fill valve that won't fully seat can drain tens of thousands of gallons a year. The problem is that:
 
-1. Leaks are invisible from the outside — you can't see or hear a slow running toilet, so they go unreported until a water bill arrives months later
+1. Leaks are invisible from the outside, which means you can't see or hear a slow running toilet, so they go unreported until a water bill arrives months later
 
 2. Schools lack any automated monitoring of toilet water usage, meaning maintenance staff only learn about leaks when the damage is already done
 
 ### Solution
-An edge-AI device that watches a tank-type toilet continuously and flags a running or leaking toilet before it wastes hundreds of gallons. The device mounts a Raspberry Pi with an ultrasonic sensor on the tank lid, decides locally whether there is a leak — with an explicit confidence score and error margin — and ships that verdict to a server. It is **advisory only**: it never shuts off water or takes any irreversible action.
+An edge-AI device that watches a tank-type toilet continuously and flags a running or leaking toilet before it wastes hundreds of gallons. The device mounts a Raspberry Pi with an ultrasonic sensor on the tank lid, decides locally whether there is a leak with an explicit confidence score and error margin — and ships that verdict to a server. It is **advisory only**: it never shuts off water or takes any irreversible action.
 
 - **Software:** A statistical detection pipeline (OLS regression + confidence intervals + a state machine) that reads water level over time and identifies the slow sawtooth pattern characteristic of a leaking flapper.
 
@@ -40,7 +40,7 @@ Level is `L = mount_height_cm − measured_distance_cm` (water rising shortens t
 | `NORMAL` | Water level is stable, no leak detected |
 | `WATCH` | Weak but real decline detected — monitoring continues |
 | `LEAK_SUSPECTED` | Conservative threshold cleared with corroborating evidence |
-| `SENSOR_FAULT` | Too few valid echoes to report — never a fabricated value |
+| `SENSOR_FAULT` | Too few valid echoes to report  |
 
 Every detection carries a full numeric reasoning trace (slope, CI, confidence, estimated waste).
 
