@@ -2,9 +2,9 @@
 
 SchoolPulse AI is a suite of three independent AI tools: **Aqualert AI** (Water Usage), **Compost AI** (Food Waste) and **Pulse AI Agent** (Energy Usgae and Event Forecasting) that helps schools visualize their entire environmental footprint on a unified web dashboard and delivers actionable steps for a school administration to take in order to reduce their substantial environmental footprint through an ElevenLabs voice agent. SchoolPulse AI was built for the USAII Global AI Hackathon 2026.
 
-**Live Dashboard:** https://school-pulse-ai.vercel.app/
-
-<br>
+- **Live Dashboard:** https://school-pulse-ai.vercel.app/
+- **YouTube Demo:** https://www.youtube.com/watch?v=I96JQc_9NcM
+- **Devpost Submission:** https://devpost.com/software/schoolprint-ai
 
 <table>
   <tr>
